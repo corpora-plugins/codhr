@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CoDHR Project Support</title>
+
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+    <style>
+        #totals {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .total-item {
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        #department-data, #people-department-data {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .department-item {
+            padding: 20px;
+        }
+  </style>
+</head>
+<body>
+    <h1>CoDHR Project Support, <span id="earliest-award-month"></span>-<span id="latest-award-month"></span></h1>
+    <h2>Award Centric Data</h2>
+    <div id="chart"></div>
+    <div id="detail"></div>
+    <div id="totals">
+        <div class="total-item">
+            <span id="total-projects" class="ticker" data-duration="350" data-total="">0</span>
+            <h4>Total Awards</h4>
+        </div>
+        <div class="total-item">
+            $<span id="total-funding" class="ticker" data-duration="350" data-total="">0</span>
+            <h4>Total Funding Awarded</h4>
+        </div>
+        <div class="total-item">
+            <span id="total-hours" class="ticker" data-duration="350" data-total="">0</span>
+            <h4>Total Hours Awarded</h4>
+        </div>
+    </div>
+    <div id="department-data">
+        <div id="departments" class="department-item"></div>
+        <div class="department-item">
+            <div id="department-detail"></div>
+        </div>
+    </div>
+
+    <h2>People Centric Data</h2>
+    <div id="people-chart"></div>
+    <div id="people-detail"></div>
+    <div id="people-department-data">
+        <div id="people-departments" class="department-item"></div>
+        <div class="department-item">
+            <div id="people-department-detail"></div>
+        </div>
+    </div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+<script type="application/javascript">
+
+    let corpus_id = '{{ corpus_id }}'
+    let corpora_host = '{{ corpora_host }}'
+
+    let awards = []
+    let projects = {}
+    let stakeholders = {}
+    let years = new Set()
+    let year_data = {}
+    let dept_data = {}
+
+    let total_projects = 0
+    let total_funding = 0
+    let total_hours = 0
+    let earliest_award = null
+    let latest_award = null
+
+    let awards_main_chart = null
+    let awards_detail_grid = null
+    let awards_dept_chart = null
+    let awards_dept_detail_grid = null
+
+    let people_main_chart = null
+    let people_detail_grid = null
+    let people_dept_chart = null
+    let people_dept_detail_grid = null
+
+    let tickerObserver = null
+    let awards_fetched = false
+    let projects_fetched = false
+    let stakeholders_fetched = false
+
+    let dollarFormatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+    })
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+        fetch(`${corpora_host}/api/corpus/${corpus_id}/Award/?page-size=5000&s_period=asc`)
+            .then(res => res.json())
+            .then(awardData => {
+                awards = awardData.records
+                total_projects = awards.length
+
+                awards.forEach(award => {
+                    let year = parseInt(date_string(award.period.start, 'Year'))
+
+                    if (!years.has(year)) {
+                        year_data[year] = {
+                            money: 0,
+                            hours: 0,
+                            awards: 0,
+                            people: new Set()
+                        }
+                        years.add(year)
+                    }
+
+                    if (award.funding_awarded) {
+                        year_data[year].money += award.funding_awarded
+                        total_funding += award.funding_awarded
+                    }
+                    if (award.hours_awarded) {
+                        year_data[year].hours += award.hours_awarded
+                        total_hours += award.hours_awarded
+                    }
+
+                    year_data[year].awards += 1
+
+                    if (!earliest_award) earliest_award = date_string(award.period.start, 'Month')
+                    latest_award = date_string(award.period.end, 'Month')
+                })
+
+                document.getElementById('earliest-award-month').innerHTML = earliest_award
+                document.getElementById('latest-award-month').innerHTML = latest_award
+                document.getElementById('total-projects').setAttribute('data-total', total_projects)
+                document.getElementById('total-funding').setAttribute('data-total', total_funding)
+                document.getElementById('total-hours').setAttribute('data-total', total_hours)
+
+                let proj_datapoints = []
+                let funding_datapoints = []
+                let hours_datapoints = []
+
+                years.forEach(year => {
+                    proj_datapoints.push(year_data[year].awards)
+                    funding_datapoints.push(year_data[year].money)
+                    hours_datapoints.push(year_data[year].hours)
+                })
+
+
+                awards_main_chart = new ApexCharts(document.querySelector("#chart"), {
+                    series: [{
+                        name: 'Awards',
+                        type: 'column',
+                        data: proj_datapoints
+                    }, {
+                        name: 'Funding',
+                        type: 'line',
+                        data: funding_datapoints
+                    }, {
+                        name: 'Hours',
+                        type: 'line',
+                        data: hours_datapoints
+                    }],
+                    chart: {
+                        height: 350,
+                        type: 'line',
+                        stacked: false,
+                        events: {
+                            click: function (event, chartContext, opts) {
+                                let year_clicked = [...years][opts.dataPointIndex]
+                                show_award_details(year_clicked)
+                            }
+                        }
+                    },
+                    dataLabels: {
+                        enabled: false
+                    },
+                    stroke: {
+                        width: [1, 4, 4]
+                    },
+                    title: {
+                        text: `CoDHR Project Support (${Math.min(...years)} - ${Math.max(...years)})`,
+                        text: '',
+                        align: 'left',
+                        offsetX: 110
+                    },
+                    xaxis: {
+                        categories: [...years],
+                    },
+                    yaxis: [
+                        {
+                            seriesName: 'Awards',
+                            axisTicks: {
+                                show: true,
+                            },
+                            axisBorder: {
+                                show: true,
+                                color: '#008FFB'
+                            },
+                            labels: {
+                                style: {
+                                    colors: '#008FFB',
+                                }
+                            },
+                            title: {
+                                text: "Awards Given",
+                                style: {
+                                    color: '#008FFB',
+                                }
+                            },
+                            tooltip: {
+                                enabled: true
+                            }
+                        },
+                        {
+                            seriesName: 'Funding',
+                            opposite: true,
+                            axisTicks: {
+                                show: true,
+                            },
+                            axisBorder: {
+                                show: true,
+                                color: '#00E396'
+                            },
+                            labels: {
+                                style: {
+                                    colors: '#00E396',
+                                }
+                            },
+                            title: {
+                                text: "Funding Awarded",
+                                style: {
+                                    color: '#00E396',
+                                }
+                            },
+                        },
+                        {
+                            seriesName: 'Hours',
+                            opposite: true,
+                            axisTicks: {
+                                show: true,
+                            },
+                            axisBorder: {
+                                show: true,
+                                color: '#FEB019'
+                            },
+                            labels: {
+                                style: {
+                                    colors: '#FEB019',
+                                },
+                            },
+                            title: {
+                                text: "Hours Awarded",
+                                style: {
+                                    color: '#FEB019',
+                                }
+                            }
+                        },
+                    ],
+                    tooltip: {
+                        fixed: {
+                            enabled: true,
+                            position: 'topLeft', // topRight, topLeft, bottomRight, bottomLeft
+                            offsetY: 30,
+                            offsetX: 60
+                        },
+                    },
+                    legend: {
+                        horizontalAlign: 'left',
+                        offsetX: 40
+                    },
+                })
+                awards_main_chart.render()
+
+                tickerObserver = new IntersectionObserver(entries => {
+                    entries.map((entry) => {
+                        if (entry.isIntersecting) {
+                            doTickerAnimation(entry.target)
+                        }
+                    })
+                })
+                let tickers = document.querySelectorAll('.ticker')
+                tickers.forEach(t => tickerObserver.observe(t))
+
+                awards_fetched = true
+            })
+
+        fetch(`${corpora_host}/api/corpus/${corpus_id}/Project/?page-size=5000`)
+            .then(res => res.json())
+            .then(projectData => {
+                projectData.records.forEach(project => {
+                    projects[project.id] = project
+                })
+                projects_fetched = true
+            })
+
+        fetch(`${corpora_host}/api/corpus/${corpus_id}/Stakeholder/?page-size=5000`)
+            .then(res => res.json())
+            .then(stakeData => {
+                stakeData.records.forEach(stake => {
+                    stakeholders[stake.id] = stake
+                    stakeholders[stake.id]['total_funding'] = 0
+                    stakeholders[stake.id]['total_hours'] = 0
+                })
+                stakeholders_fetched = true
+            })
+
+        flesh_out_report()
+    })
+
+    function date_string(timestamp, granularity='Day', adjust_for_timezone=true) {
+        let date = new Date(timestamp)
+        if (granularity === 'Day')
+            return date.toISOString().split('T')[0]
+        else if (granularity === 'Year')
+            return date.toLocaleString('default', { year: 'numeric' })
+        else if (granularity === 'Month')
+            return date.toLocaleString('default', { month: 'long', year: 'numeric' })
+    }
+
+    function show_award_details(year) {
+        if (awards_detail_grid) awards_detail_grid.destroy()
+
+        if (years.has(year)) {
+            let cols = [
+                {name: 'Project', formatter: (cell) => gridjs.html(cell)},
+                {name: 'Semester', sort: true},
+                {name:'Award', sort: true},
+                {name: 'Funding', sort: true},
+                {name:'Hours', sort: true}
+            ]
+            let data = []
+
+            awards.forEach(award => {
+                let award_year = parseInt(date_string(award.period.start, 'Year'))
+
+                if (award_year === year) {
+                    let row = []
+
+                    row.push(`<a href="/corpus/${corpus_id}/Project/${award.project.id}/" target="_blank">${award.project.title}</a>`)
+                    row.push(award.semester)
+                    row.push(award.award_type.name)
+
+                    if (award.funding_awarded)
+                        row.push(dollarFormatter.format(award.funding_awarded))
+                    else
+                        row.push('$0')
+
+                    if (award.hours_awarded)
+                        row.push(award.hours_awarded)
+                    else
+                        row.push(0)
+
+                    data.push(row)
+                }
+            })
+
+            awards_detail_grid = new gridjs.Grid({
+                columns: cols,
+                data: data
+            })
+            awards_detail_grid.render(document.getElementById('detail'))
+        }
+    }
+
+    function doTickerAnimation(ticker) {
+        const animate = () => {
+            const value = +ticker.getAttribute('data-total')
+            const speed = +ticker.getAttribute('data-duration')
+            const data = +ticker.innerText.replace(',', '')
+            const time = value / speed
+
+            if(data < value) {
+                ticker.innerText = Math.ceil(data + time).toLocaleString()
+                setTimeout(animate, 1)
+            } else {
+                ticker.innerText = value.toLocaleString()
+            }
+        }
+
+        animate()
+    }
+
+    function flesh_out_report() {
+        if (awards_fetched && projects_fetched && stakeholders_fetched) {
+            awards.forEach(award => {
+                projects[award.project.id].principle_investigators.forEach(pi_stub => {
+                    let pi = stakeholders[pi_stub.id]
+                    let year = parseInt(date_string(award.period.start, 'Year'))
+                    year_data[year].people.add(pi.id)
+
+                    if (award.funding_awarded) pi.total_funding += award.funding_awarded
+                    if (award.hours_awarded) pi.total_hours += award.hours_awarded
+
+                    if (!(pi.department.name in dept_data)) {
+                        dept_data[pi.department.name] = {awards: 1, stakeholders: new Set([pi.id])}
+                    } else {
+                        dept_data[pi.department.name].awards += 1
+                        dept_data[pi.department.name].stakeholders.add(pi.id)
+                    }
+                })
+            })
+
+            let dept_labels = Object.keys(dept_data).map(dept => dept)
+            awards_dept_chart = new ApexCharts(document.querySelector('#departments'), {
+                title: {text: 'Awards by Department'},
+                series: dept_labels.map(dept => dept_data[dept].awards),
+                labels: dept_labels,
+                chart: {
+                    type: 'donut',
+                    events: {
+                        click: function (event, chartContext, opts) {
+                            show_department_details(dept_labels[opts.dataPointIndex])
+                        }
+                    }
+                }
+            })
+            awards_dept_chart.render()
+
+            let people_datapoints = []
+            let funding_datapoints = []
+            let hours_datapoints = []
+
+            years.forEach(year => {
+                people_datapoints.push(year_data[year].people.size)
+                funding_datapoints.push(year_data[year].money)
+                hours_datapoints.push(year_data[year].hours)
+            })
+
+            people_main_chart = new ApexCharts(document.querySelector("#people-chart"), {
+                    series: [{
+                        name: 'People',
+                        type: 'column',
+                        data: people_datapoints
+                    }, {
+                        name: 'Funding',
+                        type: 'line',
+                        data: funding_datapoints
+                    }, {
+                        name: 'Hours',
+                        type: 'line',
+                        data: hours_datapoints
+                    }],
+                    chart: {
+                        height: 350,
+                        type: 'line',
+                        stacked: false,
+                        events: {
+                            click: function (event, chartContext, opts) {
+                                let year_clicked = [...years][opts.dataPointIndex]
+                                show_award_details(year_clicked)
+                            }
+                        }
+                    },
+                    dataLabels: {
+                        enabled: false
+                    },
+                    stroke: {
+                        width: [1, 4, 4]
+                    },
+                    title: {
+                        text: `CoDHR Project Support (${Math.min(...years)} - ${Math.max(...years)})`,
+                        text: '',
+                        align: 'left',
+                        offsetX: 110
+                    },
+                    xaxis: {
+                        categories: [...years],
+                    },
+                    yaxis: [
+                        {
+                            seriesName: 'People',
+                            axisTicks: {
+                                show: true,
+                            },
+                            axisBorder: {
+                                show: true,
+                                color: '#008FFB'
+                            },
+                            labels: {
+                                style: {
+                                    colors: '#008FFB',
+                                }
+                            },
+                            title: {
+                                text: "People Awarded",
+                                style: {
+                                    color: '#008FFB',
+                                }
+                            },
+                            tooltip: {
+                                enabled: true
+                            }
+                        },
+                        {
+                            seriesName: 'Funding',
+                            opposite: true,
+                            axisTicks: {
+                                show: true,
+                            },
+                            axisBorder: {
+                                show: true,
+                                color: '#00E396'
+                            },
+                            labels: {
+                                style: {
+                                    colors: '#00E396',
+                                }
+                            },
+                            title: {
+                                text: "Funding Awarded",
+                                style: {
+                                    color: '#00E396',
+                                }
+                            },
+                        },
+                        {
+                            seriesName: 'Hours',
+                            opposite: true,
+                            axisTicks: {
+                                show: true,
+                            },
+                            axisBorder: {
+                                show: true,
+                                color: '#FEB019'
+                            },
+                            labels: {
+                                style: {
+                                    colors: '#FEB019',
+                                },
+                            },
+                            title: {
+                                text: "Hours Awarded",
+                                style: {
+                                    color: '#FEB019',
+                                }
+                            }
+                        },
+                    ],
+                    tooltip: {
+                        fixed: {
+                            enabled: true,
+                            position: 'topLeft', // topRight, topLeft, bottomRight, bottomLeft
+                            offsetY: 30,
+                            offsetX: 60
+                        },
+                    },
+                    legend: {
+                        horizontalAlign: 'left',
+                        offsetX: 40
+                    },
+                })
+            people_main_chart.render()
+
+            people_dept_chart = new ApexCharts(document.querySelector('#people-departments'), {
+                title: {text: 'People by Department'},
+                series: dept_labels.map(dept => dept_data[dept].stakeholders.size),
+                labels: dept_labels,
+                chart: {
+                    type: 'donut',
+                    events: {
+                        click: function (event, chartContext, opts) {
+                            show_department_details(dept_labels[opts.dataPointIndex])
+                        }
+                    }
+                }
+            })
+            people_dept_chart.render()
+        } else {
+            setTimeout(() => flesh_out_report(), 1000)
+        }
+    }
+
+    function show_department_details(dept) {
+        if (awards_dept_detail_grid) awards_dept_detail_grid.destroy()
+
+        let cols = [
+            {name: 'Principal Investigator', formatter: (cell) => gridjs.html(cell)},
+            {name: 'Total Funding', sort: true},
+            {name:'Total Hours', sort: true}
+        ]
+        let data = []
+
+        dept_data[dept].stakeholders.forEach(pi_id => {
+            let row = []
+            let pi = stakeholders[pi_id]
+
+            row.push(`<a href="/corpus/${corpus_id}/Stakeholder/${pi.id}/" target="_blank">${pi.name}</a>`)
+            row.push(dollarFormatter.format(pi.total_funding))
+            row.push(pi.total_hours)
+
+            data.push(row)
+        })
+
+        awards_dept_detail_grid = new gridjs.Grid({
+            columns: cols,
+            data: data
+        })
+        awards_dept_detail_grid.render(document.getElementById('department-detail'))
+    }
+
+</script>
+</body>
+</html>
