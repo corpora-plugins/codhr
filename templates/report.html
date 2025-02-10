@@ -6,6 +6,15 @@
 
     <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
     <style>
+        :root {
+            --color-one: #500000;
+            --color-two: #90A959;
+            --color-three: #3E3E3E;
+            --color-four: #E9B872;
+            --color-five: #6494AA;
+        }
+
+
         #totals {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -75,6 +84,7 @@
 
     let corpus_id = '{{ corpus_id }}'
     let corpora_host = '{{ corpora_host }}'
+    let chart_colors = ['#500000', '#90A959', '#E9B872', '#3E3E3E', '#6494AA']
 
     let awards = []
     let projects = {}
@@ -176,6 +186,7 @@
                         type: 'line',
                         data: hours_datapoints
                     }],
+                    colors: chart_colors,
                     chart: {
                         height: 350,
                         type: 'line',
@@ -210,17 +221,17 @@
                             },
                             axisBorder: {
                                 show: true,
-                                color: '#008FFB'
+                                color: chart_colors[0],
                             },
                             labels: {
                                 style: {
-                                    colors: '#008FFB',
+                                    colors: chart_colors[0],
                                 }
                             },
                             title: {
                                 text: "Awards Given",
                                 style: {
-                                    color: '#008FFB',
+                                    color: chart_colors[0],
                                 }
                             },
                             tooltip: {
@@ -235,17 +246,17 @@
                             },
                             axisBorder: {
                                 show: true,
-                                color: '#00E396'
+                                color: chart_colors[1]
                             },
                             labels: {
                                 style: {
-                                    colors: '#00E396',
+                                    colors: chart_colors[1],
                                 }
                             },
                             title: {
                                 text: "Funding Awarded",
                                 style: {
-                                    color: '#00E396',
+                                    color: chart_colors[1],
                                 }
                             },
                         },
@@ -257,17 +268,17 @@
                             },
                             axisBorder: {
                                 show: true,
-                                color: '#FEB019'
+                                color: chart_colors[2]
                             },
                             labels: {
                                 style: {
-                                    colors: '#FEB019',
+                                    colors: chart_colors[2],
                                 },
                             },
                             title: {
                                 text: "Hours Awarded",
                                 style: {
-                                    color: '#FEB019',
+                                    color: chart_colors[2],
                                 }
                             }
                         },
@@ -421,6 +432,7 @@
                 title: {text: 'Awards by Department'},
                 series: dept_labels.map(dept => dept_data[dept].awards),
                 labels: dept_labels,
+                colors: chart_colors,
                 chart: {
                     type: 'donut',
                     events: {
@@ -467,6 +479,7 @@
                             }
                         }
                     },
+                    colors: chart_colors,
                     dataLabels: {
                         enabled: false
                     },
@@ -490,17 +503,17 @@
                             },
                             axisBorder: {
                                 show: true,
-                                color: '#008FFB'
+                                color: chart_colors[0]
                             },
                             labels: {
                                 style: {
-                                    colors: '#008FFB',
+                                    colors: chart_colors[0],
                                 }
                             },
                             title: {
                                 text: "People Awarded",
                                 style: {
-                                    color: '#008FFB',
+                                    color: chart_colors[0],
                                 }
                             },
                             tooltip: {
@@ -515,17 +528,17 @@
                             },
                             axisBorder: {
                                 show: true,
-                                color: '#00E396'
+                                color: chart_colors[1]
                             },
                             labels: {
                                 style: {
-                                    colors: '#00E396',
+                                    colors: chart_colors[1]
                                 }
                             },
                             title: {
                                 text: "Funding Awarded",
                                 style: {
-                                    color: '#00E396',
+                                    color: chart_colors[1],
                                 }
                             },
                         },
@@ -537,17 +550,17 @@
                             },
                             axisBorder: {
                                 show: true,
-                                color: '#FEB019'
+                                color: chart_colors[2]
                             },
                             labels: {
                                 style: {
-                                    colors: '#FEB019',
+                                    colors: chart_colors[2],
                                 },
                             },
                             title: {
                                 text: "Hours Awarded",
                                 style: {
-                                    color: '#FEB019',
+                                    color: chart_colors[2],
                                 }
                             }
                         },
@@ -571,6 +584,7 @@
                 title: {text: 'People by Department'},
                 series: dept_labels.map(dept => dept_data[dept].stakeholders.size),
                 labels: dept_labels,
+                colors: chart_colors,
                 chart: {
                     type: 'donut',
                     events: {
