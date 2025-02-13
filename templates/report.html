@@ -51,11 +51,15 @@
             padding-right: 20px;
         }
 
-        #department-data, #event-department-data {
+        .department-data {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
             padding: 20px;
+        }
+
+        .apexcharts-tooltip-text {
+            color: #FFFFFF!important;
         }
 
         .department-item {
@@ -89,7 +93,7 @@
     <div id="chart"></div>
     <div id="detail" class="scroll-pane"></div>
 
-    <div id="department-data">
+    <div class="department-data">
         <div id="departments" class="department-item"></div>
         <div class="department-item">
             <div id="department-detail" class="scroll-pane"></div>
@@ -109,11 +113,12 @@
         <div></div>
     </div>
     <div id="event-chart"></div>
+    <div id="event-detail" class="scroll-pane"></div>
 
-    <div id="event-department-data">
+    <div class="department-data">
         <div id="event-departments" class="department-item"></div>
         <div class="department-item">
-            <div id="event-department-detail"></div>
+            <div id="event-department-detail" class="scroll-pane"></div>
         </div>
     </div>
 
@@ -169,6 +174,8 @@
 
     let events_main_chart = null
     let events_dept_chart = null
+    let events_detail_grid = null
+    let events_dept_detail_grid = null
 
     let tickerObserver = null
     let dollarFormatter = new Intl.NumberFormat('en-US', {
@@ -265,8 +272,7 @@
             })
         })
 
-        events = eventData.records
-        events.forEach(event => {
+        eventData.records.forEach(event => {
             let period = event.period.title
             events[event.id] = event
             events[event.id].attendees = []
@@ -401,8 +407,7 @@
                 width: [1, 4, 4]
             },
             title: {
-                text: `CoDHR Project Support`,
-                text: '',
+                text: `Awards Overview`,
                 align: 'left',
                 offsetX: 110
             },
@@ -635,12 +640,12 @@
                 fontFamily: 'Oswald, sans-serif',
                 type: 'line',
                 stacked: false,
-                //events: {
-                //    click: function (event, chartContext, opts) {
-                //        let period_clicked = relevantPeriods[opts.dataPointIndex]
-                //        show_award_details(period_clicked)
-                //    }
-                //}
+                events: {
+                    click: function (event, chartContext, opts) {
+                        let period_clicked = relevantPeriods[opts.dataPointIndex]
+                        show_event_details(period_clicked)
+                    }
+                }
             },
             dataLabels: {
                 enabled: false
@@ -649,8 +654,7 @@
                 width: [1, 4]
             },
             title: {
-                text: `CoDHR Events`,
-                text: '',
+                text: `Events Overview`,
                 align: 'left',
                 offsetX: 110
             },
@@ -725,6 +729,40 @@
         events_main_chart.render()
     }
 
+    function show_event_details(period) {
+        if (events_detail_grid) events_detail_grid.destroy()
+
+        if (periods.has(period)) {
+            let cols = [
+                {name: 'Event', formatter: (cell) => gridjs.html(cell)},
+                {name:'Attendees', sort: true},
+                {name: 'Semester'},
+            ]
+            let data = []
+
+            Object.keys(events).forEach(event_id => {
+                let event = events[event_id]
+                let event_period = event.period.title
+
+                if (event_period === period) {
+                    let row = []
+
+                    row.push(`<a href="/corpus/${corpus_id}/Event/${event_id}/" target="_blank">${event.title}</a>`)
+                    row.push(event.attendees.length)
+                    row.push(period)
+
+                    data.push(row)
+                }
+            })
+
+            events_detail_grid = new gridjs.Grid({
+                columns: cols,
+                data: data
+            })
+            events_detail_grid.render(document.getElementById('event-detail'))
+        }
+    }
+
     function build_events_dept_chart() {
         if (events_dept_chart) events_dept_chart.destroy()
 
@@ -733,7 +771,7 @@
             if (dept_data[dept].attendees > 0) relevantDepts.push(dept)
         })
         events_dept_chart = new ApexCharts(document.querySelector('#event-departments'), {
-            title: {text: 'Events by Department'},
+            title: {text: 'Event Attendees by Department'},
             series: relevantDepts.map(dept => dept_data[dept].attendees),
             labels: relevantDepts,
             colors: chart_colors,
