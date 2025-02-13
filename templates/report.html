@@ -51,8 +51,6 @@
             padding-right: 20px;
         }
 
-        
-
         #department-data, #event-department-data {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -62,6 +60,11 @@
 
         .department-item {
             padding: 20px;
+        }
+
+        .scroll-pane {
+            max-height: 80vh;
+            overflow-y: scroll;
         }
   </style>
 </head>
@@ -84,12 +87,12 @@
         </div>
     </div>
     <div id="chart"></div>
-    <div id="detail"></div>
+    <div id="detail" class="scroll-pane"></div>
 
     <div id="department-data">
         <div id="departments" class="department-item"></div>
         <div class="department-item">
-            <div id="department-detail"></div>
+            <div id="department-detail" class="scroll-pane"></div>
         </div>
     </div>
 
@@ -380,7 +383,7 @@
             }],
             colors: chart_colors,
             chart: {
-                height: 350,
+                height: Math.floor(window.innerHeight * 0.8),
                 fontFamily: 'Oswald, sans-serif',
                 type: 'line',
                 stacked: false,
@@ -544,18 +547,22 @@
     function build_awards_dept_chart() {
         if (awards_dept_chart) awards_dept_chart.destroy()
 
-        let dept_labels = Object.keys(dept_data).map(dept => dept)
+        let relevantDepts = []
+        Object.keys(dept_data).forEach(dept => {
+            if (dept_data[dept].awards > 0) relevantDepts.push(dept)
+        })
+
         awards_dept_chart = new ApexCharts(document.querySelector('#departments'), {
             title: {text: 'Awards by Department'},
-            series: dept_labels.map(dept => dept_data[dept].awards),
-            labels: dept_labels,
+            series: relevantDepts.map(dept => dept_data[dept].awards),
+            labels: relevantDepts,
             colors: chart_colors,
             chart: {
                 type: 'donut',
                 fontFamily: 'Oswald, sans-serif',
                 events: {
                     click: function (event, chartContext, opts) {
-                        show_department_details(dept_labels[opts.dataPointIndex])
+                        show_department_details(relevantDepts[opts.dataPointIndex])
                     }
                 }
             }
@@ -624,7 +631,7 @@
             }],
             colors: chart_colors,
             chart: {
-                height: 350,
+                height: Math.floor(window.innerHeight * 0.8),
                 fontFamily: 'Oswald, sans-serif',
                 type: 'line',
                 stacked: false,
@@ -721,11 +728,14 @@
     function build_events_dept_chart() {
         if (events_dept_chart) events_dept_chart.destroy()
 
-        let dept_labels = Object.keys(dept_data).map(dept => dept)
+        let relevantDepts = []
+        Object.keys(dept_data).forEach(dept => {
+            if (dept_data[dept].attendees > 0) relevantDepts.push(dept)
+        })
         events_dept_chart = new ApexCharts(document.querySelector('#event-departments'), {
             title: {text: 'Events by Department'},
-            series: dept_labels.map(dept => dept_data[dept].attendees),
-            labels: dept_labels,
+            series: relevantDepts.map(dept => dept_data[dept].attendees),
+            labels: relevantDepts,
             colors: chart_colors,
             chart: {
                 type: 'donut',
