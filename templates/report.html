@@ -1,9 +1,12 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>CoDHR Project Support</title>
 
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet" />
     <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
     <style>
         :root {
@@ -14,10 +17,24 @@
             --color-five: #6494AA;
         }
 
+        body {
+            font-family: "Oswald", sans-serif;
+        }
 
-        #totals {
+        #codhr-logo {
+            max-height: 75px;
+        }
+
+        #award-totals {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 20px;
+        }
+
+        #event-totals {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
             padding: 20px;
         }
@@ -29,7 +46,14 @@
             text-align: center;
         }
 
-        #department-data, #people-department-data {
+        #chart, #event-chart {
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        
+
+        #department-data, #event-department-data {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
@@ -42,11 +66,10 @@
   </style>
 </head>
 <body>
-    <h1>CoDHR Project Support, <span id="earliest-award-month"></span>-<span id="latest-award-month"></span></h1>
-    <h2>Award Centric Data</h2>
-    <div id="chart"></div>
-    <div id="detail"></div>
-    <div id="totals">
+    <img id="codhr-logo" src="{% static 'img/codhr-data-report-logo.png' %}" alt="Center of Digital Humanities Research" />
+    <h1>Project Support and Event Data</h1>
+    From <select id="period-start-box"></select> to <select id="period-end-box"></select>
+    <div id="award-totals">
         <div class="total-item">
             <span id="total-projects" class="ticker" data-duration="350" data-total="">0</span>
             <h4>Total Awards</h4>
@@ -60,6 +83,9 @@
             <h4>Total Hours Awarded</h4>
         </div>
     </div>
+    <div id="chart"></div>
+    <div id="detail"></div>
+
     <div id="department-data">
         <div id="departments" class="department-item"></div>
         <div class="department-item">
@@ -67,53 +93,81 @@
         </div>
     </div>
 
-    <h2>People Centric Data</h2>
-    <div id="people-chart"></div>
-    <div id="people-detail"></div>
-    <div id="people-department-data">
-        <div id="people-departments" class="department-item"></div>
+    <div id="event-totals">
+        <div></div>
+        <div class="total-item">
+            <span id="total-events" class="ticker" data-duration="350" data-total="">0</span>
+            <h4>Total Events</h4>
+        </div>
+        <div class="total-item">
+            <span id="total-attendees" class="ticker" data-duration="350" data-total="">0</span>
+            <h4>Total Attendees</h4>
+        </div>
+        <div></div>
+    </div>
+    <div id="event-chart"></div>
+
+    <div id="event-department-data">
+        <div id="event-departments" class="department-item"></div>
         <div class="department-item">
-            <div id="people-department-detail"></div>
+            <div id="event-department-detail"></div>
         </div>
     </div>
 
 
+
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+{{ award_data|json_script:"award-data" }}
+{{ project_data|json_script:"project-data" }}
+{{ stakeholder_data|json_script:"stakeholder-data" }}
+{{ period_data|json_script:"period-data" }}
+{{ event_data|json_script:"event-data" }}
+{{ attendance_data|json_script:"attendance-data" }}
 <script type="application/javascript">
 
     let corpus_id = '{{ corpus_id }}'
     let corpora_host = '{{ corpora_host }}'
     let chart_colors = ['#500000', '#90A959', '#E9B872', '#3E3E3E', '#6494AA']
 
+    let periodStartBox = document.getElementById('period-start-box')
+    let periodEndBox = document.getElementById('period-end-box')
+    let totalProjectsSpan = document.getElementById('total-projects')
+    let totalFundingSpan = document.getElementById('total-funding')
+    let totalHoursSpan = document.getElementById('total-hours')
+    let totalEventsSpan = document.getElementById('total-events')
+    let totalAttendeesSpan = document.getElementById('total-attendees')
+
+    const awardData = JSON.parse(document.getElementById('award-data').textContent)
+    const projectData = JSON.parse(document.getElementById('project-data').textContent)
+    const stakeholderData = JSON.parse(document.getElementById('stakeholder-data').textContent)
+    const periodData = JSON.parse(document.getElementById('period-data').textContent)
+    const eventData = JSON.parse(document.getElementById('event-data').textContent)
+    const attendanceData = JSON.parse(document.getElementById('attendance-data').textContent)
+
     let awards = []
     let projects = {}
     let stakeholders = {}
-    let years = new Set()
-    let year_data = {}
+    let events = {}
+    let periods = new Set()
+    let period_data = {}
     let dept_data = {}
 
     let total_projects = 0
     let total_funding = 0
     let total_hours = 0
-    let earliest_award = null
-    let latest_award = null
+    let total_events = 0
+    let total_attendees = 0
 
     let awards_main_chart = null
     let awards_detail_grid = null
     let awards_dept_chart = null
     let awards_dept_detail_grid = null
 
-    let people_main_chart = null
-    let people_detail_grid = null
-    let people_dept_chart = null
-    let people_dept_detail_grid = null
+    let events_main_chart = null
+    let events_dept_chart = null
 
     let tickerObserver = null
-    let awards_fetched = false
-    let projects_fetched = false
-    let stakeholders_fetched = false
-
     let dollarFormatter = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
@@ -121,233 +175,331 @@
 
 
     document.addEventListener('DOMContentLoaded', function () {
-        fetch(`${corpora_host}/api/corpus/${corpus_id}/Award/?page-size=5000&s_period=asc`)
-            .then(res => res.json())
-            .then(awardData => {
-                awards = awardData.records
-                total_projects = awards.length
+        build_data_structures()
+        render_data()
 
-                awards.forEach(award => {
-                    let year = parseInt(date_string(award.period.start, 'Year'))
-
-                    if (!years.has(year)) {
-                        year_data[year] = {
-                            money: 0,
-                            hours: 0,
-                            awards: 0,
-                            people: new Set()
-                        }
-                        years.add(year)
-                    }
-
-                    if (award.funding_awarded) {
-                        year_data[year].money += award.funding_awarded
-                        total_funding += award.funding_awarded
-                    }
-                    if (award.hours_awarded) {
-                        year_data[year].hours += award.hours_awarded
-                        total_hours += award.hours_awarded
-                    }
-
-                    year_data[year].awards += 1
-
-                    if (!earliest_award) earliest_award = date_string(award.period.start, 'Month')
-                    latest_award = date_string(award.period.end, 'Month')
-                })
-
-                document.getElementById('earliest-award-month').innerHTML = earliest_award
-                document.getElementById('latest-award-month').innerHTML = latest_award
-                document.getElementById('total-projects').setAttribute('data-total', total_projects)
-                document.getElementById('total-funding').setAttribute('data-total', total_funding)
-                document.getElementById('total-hours').setAttribute('data-total', total_hours)
-
-                let proj_datapoints = []
-                let funding_datapoints = []
-                let hours_datapoints = []
-
-                years.forEach(year => {
-                    proj_datapoints.push(year_data[year].awards)
-                    funding_datapoints.push(year_data[year].money)
-                    hours_datapoints.push(year_data[year].hours)
-                })
-
-
-                awards_main_chart = new ApexCharts(document.querySelector("#chart"), {
-                    series: [{
-                        name: 'Awards',
-                        type: 'column',
-                        data: proj_datapoints
-                    }, {
-                        name: 'Funding',
-                        type: 'line',
-                        data: funding_datapoints
-                    }, {
-                        name: 'Hours',
-                        type: 'line',
-                        data: hours_datapoints
-                    }],
-                    colors: chart_colors,
-                    chart: {
-                        height: 350,
-                        type: 'line',
-                        stacked: false,
-                        events: {
-                            click: function (event, chartContext, opts) {
-                                let year_clicked = [...years][opts.dataPointIndex]
-                                show_award_details(year_clicked)
-                            }
-                        }
-                    },
-                    dataLabels: {
-                        enabled: false
-                    },
-                    stroke: {
-                        width: [1, 4, 4]
-                    },
-                    title: {
-                        text: `CoDHR Project Support (${Math.min(...years)} - ${Math.max(...years)})`,
-                        text: '',
-                        align: 'left',
-                        offsetX: 110
-                    },
-                    xaxis: {
-                        categories: [...years],
-                    },
-                    yaxis: [
-                        {
-                            seriesName: 'Awards',
-                            axisTicks: {
-                                show: true,
-                            },
-                            axisBorder: {
-                                show: true,
-                                color: chart_colors[0],
-                            },
-                            labels: {
-                                style: {
-                                    colors: chart_colors[0],
-                                }
-                            },
-                            title: {
-                                text: "Awards Given",
-                                style: {
-                                    color: chart_colors[0],
-                                }
-                            },
-                            tooltip: {
-                                enabled: true
-                            }
-                        },
-                        {
-                            seriesName: 'Funding',
-                            opposite: true,
-                            axisTicks: {
-                                show: true,
-                            },
-                            axisBorder: {
-                                show: true,
-                                color: chart_colors[1]
-                            },
-                            labels: {
-                                style: {
-                                    colors: chart_colors[1],
-                                }
-                            },
-                            title: {
-                                text: "Funding Awarded",
-                                style: {
-                                    color: chart_colors[1],
-                                }
-                            },
-                        },
-                        {
-                            seriesName: 'Hours',
-                            opposite: true,
-                            axisTicks: {
-                                show: true,
-                            },
-                            axisBorder: {
-                                show: true,
-                                color: chart_colors[2]
-                            },
-                            labels: {
-                                style: {
-                                    colors: chart_colors[2],
-                                },
-                            },
-                            title: {
-                                text: "Hours Awarded",
-                                style: {
-                                    color: chart_colors[2],
-                                }
-                            }
-                        },
-                    ],
-                    tooltip: {
-                        fixed: {
-                            enabled: true,
-                            position: 'topLeft', // topRight, topLeft, bottomRight, bottomLeft
-                            offsetY: 30,
-                            offsetX: 60
-                        },
-                    },
-                    legend: {
-                        horizontalAlign: 'left',
-                        offsetX: 40
-                    },
-                })
-                awards_main_chart.render()
-
-                tickerObserver = new IntersectionObserver(entries => {
-                    entries.map((entry) => {
-                        if (entry.isIntersecting) {
-                            doTickerAnimation(entry.target)
-                        }
-                    })
-                })
-                let tickers = document.querySelectorAll('.ticker')
-                tickers.forEach(t => tickerObserver.observe(t))
-
-                awards_fetched = true
+        tickerObserver = new IntersectionObserver(entries => {
+            entries.map((entry) => {
+                if (entry.isIntersecting) {
+                    doTickerAnimation(entry.target)
+                }
             })
+        })
+        let tickers = document.querySelectorAll('.ticker')
+        tickers.forEach(t => tickerObserver.observe(t))
 
-        fetch(`${corpora_host}/api/corpus/${corpus_id}/Project/?page-size=5000`)
-            .then(res => res.json())
-            .then(projectData => {
-                projectData.records.forEach(project => {
-                    projects[project.id] = project
-                })
-                projects_fetched = true
-            })
-
-        fetch(`${corpora_host}/api/corpus/${corpus_id}/Stakeholder/?page-size=5000`)
-            .then(res => res.json())
-            .then(stakeData => {
-                stakeData.records.forEach(stake => {
-                    stakeholders[stake.id] = stake
-                    stakeholders[stake.id]['total_funding'] = 0
-                    stakeholders[stake.id]['total_hours'] = 0
-                })
-                stakeholders_fetched = true
-            })
-
-        flesh_out_report()
+        periodStartBox.addEventListener('change', function(event) {
+            render_data()
+        })
+        periodEndBox.addEventListener('change', function(event) {
+            render_data()
+        })
     })
 
-    function date_string(timestamp, granularity='Day', adjust_for_timezone=true) {
-        let date = new Date(timestamp)
-        if (granularity === 'Day')
-            return date.toISOString().split('T')[0]
-        else if (granularity === 'Year')
-            return date.toLocaleString('default', { year: 'numeric' })
-        else if (granularity === 'Month')
-            return date.toLocaleString('default', { month: 'long', year: 'numeric' })
+    function build_data_structures() {
+        periodData.records.forEach(period => {
+            const optionElement = document.createElement('option')
+            optionElement.value = period.title
+            optionElement.text = period.title
+            periodStartBox.appendChild(optionElement)
+            periodEndBox.appendChild(optionElement.cloneNode(true))
+
+            period_data[period.title] = {
+                money: 0,
+                hours: 0,
+                awards: 0,
+                people: new Set(),
+                events: new Set(),
+                attendees: 0,
+            }
+            periods.add(period.title)
+        })
+
+        periodStartBox.value = [...periods][0]
+        periodEndBox.value = [...periods][periods.size - 1]
+
+        projectData.records.forEach(project => {
+            projects[project.id] = project
+        })
+
+        stakeholderData.records.forEach(stake => {
+            stakeholders[stake.id] = stake
+            stakeholders[stake.id]['total_funding'] = 0
+            stakeholders[stake.id]['total_hours'] = 0
+        })
+
+        awards = awardData.records
+        awards.forEach(award => {
+            let period = award.award_period.title
+
+            if (award.funding_awarded) {
+                period_data[period].money += award.funding_awarded
+            }
+            if (award.hours_awarded) {
+                period_data[period].hours += award.hours_awarded
+            }
+
+            period_data[period].awards += 1
+
+            projects[award.project.id].principle_investigators.forEach(pi_stub => {
+                let pi = stakeholders[pi_stub.id]
+                let period = award.award_period.title
+                period_data[period].people.add(pi.id)
+
+                if (award.funding_awarded) pi.total_funding += award.funding_awarded
+                if (award.hours_awarded) pi.total_hours += award.hours_awarded
+
+                if (!(pi.department.name in dept_data)) {
+                    dept_data[pi.department.name] = {
+                        awards: 1,
+                        stakeholders: new Set([pi.id]),
+                        attendees: 0
+                    }
+                } else {
+                    dept_data[pi.department.name].awards += 1
+                    dept_data[pi.department.name].stakeholders.add(pi.id)
+                }
+            })
+        })
+
+        events = eventData.records
+        events.forEach(event => {
+            let period = event.period.title
+            events[event.id] = event
+            events[event.id].attendees = []
+            period_data[period].events.add(event.id)
+        })
+
+        attendanceData.records.forEach(attendance => {
+            events[attendance.event.id].attendees.push(attendance.person.id)
+            let dept_name = stakeholders[attendance.person.id].department.name
+            if (!(dept_name in dept_data)) {
+                dept_data[dept_name] = {
+                    awards: 0,
+                    stakeholders: new Set(),
+                    attendees: 0
+                }
+            }
+            dept_data[dept_name].attendees += 1
+        })
+
+        periods.forEach(period => {
+            period_data[period].events.forEach(event_id => {
+                period_data[period].attendees += events[event_id].attendees.length
+            })
+        })
     }
 
-    function show_award_details(year) {
+    function render_data() {
+        build_totals()
+        build_awards_main_chart()
+        build_awards_dept_chart()
+        build_events_main_chart()
+        build_events_dept_chart()
+
+        if (awards_detail_grid) awards_detail_grid.destroy()
+        if (awards_dept_detail_grid) awards_dept_detail_grid.destroy()
+    }
+
+    function build_totals() {
+        totalProjectsSpan.innerHTML = '0'
+        totalFundingSpan.innerHTML = '0'
+        totalHoursSpan.innerHTML = '0'
+        totalEventsSpan.innerHTML = '0'
+        totalAttendeesSpan.innerHTML = '0'
+        total_projects = 0
+        total_funding = 0
+        total_hours = 0
+        total_events = 0
+        total_attendees = 0
+
+        let awardPeriodStarted = false
+        let awardPeriodEnded = false
+        periods.forEach(period => {
+            if (period === periodStartBox.value) awardPeriodStarted = true
+
+            if (awardPeriodStarted && !awardPeriodEnded) {
+                total_projects += period_data[period].awards
+                total_funding += period_data[period].money
+                total_hours += period_data[period].hours
+                total_events += period_data[period].events.size
+                total_attendees += period_data[period].attendees
+            }
+
+            if (period === periodEndBox.value) awardPeriodEnded = true
+        })
+
+        totalProjectsSpan.setAttribute('data-total', total_projects)
+        totalFundingSpan.setAttribute('data-total', total_funding)
+        totalHoursSpan.setAttribute('data-total', total_hours)
+        totalEventsSpan.setAttribute('data-total', total_events)
+        totalAttendeesSpan.setAttribute('data-total', total_attendees)
+        doTickerAnimation(totalProjectsSpan)
+        doTickerAnimation(totalFundingSpan)
+        doTickerAnimation(totalHoursSpan)
+        doTickerAnimation(totalEventsSpan)
+        doTickerAnimation(totalAttendeesSpan)
+    }
+
+    function build_awards_main_chart() {
+        if (awards_main_chart) awards_main_chart.destroy()
+
+        let proj_datapoints = []
+        let funding_datapoints = []
+        let hours_datapoints = []
+
+        let awardPeriodStarted = false
+        let awardPeriodEnded = false
+        let relevantPeriods = []
+        periods.forEach(period => {
+            if (period === periodStartBox.value) awardPeriodStarted = true
+
+            if (awardPeriodStarted && !awardPeriodEnded) {
+                relevantPeriods.push(period)
+                proj_datapoints.push(period_data[period].awards)
+                funding_datapoints.push(period_data[period].money)
+                hours_datapoints.push(period_data[period].hours)
+            }
+
+            if (period === periodEndBox.value) awardPeriodEnded = true
+        })
+
+        awards_main_chart = new ApexCharts(document.querySelector("#chart"), {
+            series: [{
+                name: 'Awards',
+                type: 'column',
+                data: proj_datapoints
+            }, {
+                name: 'Funding',
+                type: 'line',
+                data: funding_datapoints
+            }, {
+                name: 'Hours',
+                type: 'line',
+                data: hours_datapoints
+            }],
+            colors: chart_colors,
+            chart: {
+                height: 350,
+                fontFamily: 'Oswald, sans-serif',
+                type: 'line',
+                stacked: false,
+                events: {
+                    click: function (event, chartContext, opts) {
+                        let period_clicked = relevantPeriods[opts.dataPointIndex]
+                        show_award_details(period_clicked)
+                    }
+                }
+            },
+            dataLabels: {
+                enabled: false
+            },
+            stroke: {
+                width: [1, 4, 4]
+            },
+            title: {
+                text: `CoDHR Project Support`,
+                text: '',
+                align: 'left',
+                offsetX: 110
+            },
+            xaxis: {
+                categories: relevantPeriods,
+                labels: {
+                    rotate: -45,
+                    rotateAlways: true,
+                }
+            },
+            yaxis: [
+                {
+                    seriesName: 'Awards',
+                    axisTicks: {
+                        show: true,
+                    },
+                    axisBorder: {
+                        show: true,
+                        color: chart_colors[0],
+                    },
+                    labels: {
+                        style: {
+                            colors: chart_colors[0],
+                        }
+                    },
+                    title: {
+                        text: "Awards Given",
+                        style: {
+                            color: chart_colors[0],
+                        }
+                    },
+                    tooltip: {
+                        enabled: true
+                    }
+                },
+                {
+                    seriesName: 'Funding',
+                    opposite: true,
+                    axisTicks: {
+                        show: true,
+                    },
+                    axisBorder: {
+                        show: true,
+                        color: chart_colors[1]
+                    },
+                    labels: {
+                        style: {
+                            colors: chart_colors[1],
+                        }
+                    },
+                    title: {
+                        text: "Funding Awarded",
+                        style: {
+                            color: chart_colors[1],
+                        }
+                    },
+                },
+                {
+                    seriesName: 'Hours',
+                    opposite: true,
+                    axisTicks: {
+                        show: true,
+                    },
+                    axisBorder: {
+                        show: true,
+                        color: chart_colors[2]
+                    },
+                    labels: {
+                        style: {
+                            colors: chart_colors[2],
+                        },
+                    },
+                    title: {
+                        text: "Hours Awarded",
+                        style: {
+                            color: chart_colors[2],
+                        }
+                    }
+                },
+            ],
+            tooltip: {
+                fixed: {
+                    enabled: true,
+                    position: 'topLeft', // topRight, topLeft, bottomRight, bottomLeft
+                    offsetY: 30,
+                    offsetX: 60
+                },
+            },
+            legend: {
+                horizontalAlign: 'left',
+                offsetX: 40
+            },
+        })
+        awards_main_chart.render()
+    }
+
+    function show_award_details(period) {
         if (awards_detail_grid) awards_detail_grid.destroy()
 
-        if (years.has(year)) {
+        if (periods.has(period)) {
             let cols = [
                 {name: 'Project', formatter: (cell) => gridjs.html(cell)},
                 {name: 'Semester', sort: true},
@@ -358,13 +510,13 @@
             let data = []
 
             awards.forEach(award => {
-                let award_year = parseInt(date_string(award.period.start, 'Year'))
+                let award_period = award.award_period.title
 
-                if (award_year === year) {
+                if (award_period === period) {
                     let row = []
 
                     row.push(`<a href="/corpus/${corpus_id}/Project/${award.project.id}/" target="_blank">${award.project.title}</a>`)
-                    row.push(award.semester)
+                    row.push(period)
                     row.push(award.award_type.name)
 
                     if (award.funding_awarded)
@@ -389,215 +541,26 @@
         }
     }
 
-    function doTickerAnimation(ticker) {
-        const animate = () => {
-            const value = +ticker.getAttribute('data-total')
-            const speed = +ticker.getAttribute('data-duration')
-            const data = +ticker.innerText.replace(',', '')
-            const time = value / speed
+    function build_awards_dept_chart() {
+        if (awards_dept_chart) awards_dept_chart.destroy()
 
-            if(data < value) {
-                ticker.innerText = Math.ceil(data + time).toLocaleString()
-                setTimeout(animate, 1)
-            } else {
-                ticker.innerText = value.toLocaleString()
+        let dept_labels = Object.keys(dept_data).map(dept => dept)
+        awards_dept_chart = new ApexCharts(document.querySelector('#departments'), {
+            title: {text: 'Awards by Department'},
+            series: dept_labels.map(dept => dept_data[dept].awards),
+            labels: dept_labels,
+            colors: chart_colors,
+            chart: {
+                type: 'donut',
+                fontFamily: 'Oswald, sans-serif',
+                events: {
+                    click: function (event, chartContext, opts) {
+                        show_department_details(dept_labels[opts.dataPointIndex])
+                    }
+                }
             }
-        }
-
-        animate()
-    }
-
-    function flesh_out_report() {
-        if (awards_fetched && projects_fetched && stakeholders_fetched) {
-            awards.forEach(award => {
-                projects[award.project.id].principle_investigators.forEach(pi_stub => {
-                    let pi = stakeholders[pi_stub.id]
-                    let year = parseInt(date_string(award.period.start, 'Year'))
-                    year_data[year].people.add(pi.id)
-
-                    if (award.funding_awarded) pi.total_funding += award.funding_awarded
-                    if (award.hours_awarded) pi.total_hours += award.hours_awarded
-
-                    if (!(pi.department.name in dept_data)) {
-                        dept_data[pi.department.name] = {awards: 1, stakeholders: new Set([pi.id])}
-                    } else {
-                        dept_data[pi.department.name].awards += 1
-                        dept_data[pi.department.name].stakeholders.add(pi.id)
-                    }
-                })
-            })
-
-            let dept_labels = Object.keys(dept_data).map(dept => dept)
-            awards_dept_chart = new ApexCharts(document.querySelector('#departments'), {
-                title: {text: 'Awards by Department'},
-                series: dept_labels.map(dept => dept_data[dept].awards),
-                labels: dept_labels,
-                colors: chart_colors,
-                chart: {
-                    type: 'donut',
-                    events: {
-                        click: function (event, chartContext, opts) {
-                            show_department_details(dept_labels[opts.dataPointIndex])
-                        }
-                    }
-                }
-            })
-            awards_dept_chart.render()
-
-            let people_datapoints = []
-            let funding_datapoints = []
-            let hours_datapoints = []
-
-            years.forEach(year => {
-                people_datapoints.push(year_data[year].people.size)
-                funding_datapoints.push(year_data[year].money)
-                hours_datapoints.push(year_data[year].hours)
-            })
-
-            people_main_chart = new ApexCharts(document.querySelector("#people-chart"), {
-                    series: [{
-                        name: 'People',
-                        type: 'column',
-                        data: people_datapoints
-                    }, {
-                        name: 'Funding',
-                        type: 'line',
-                        data: funding_datapoints
-                    }, {
-                        name: 'Hours',
-                        type: 'line',
-                        data: hours_datapoints
-                    }],
-                    chart: {
-                        height: 350,
-                        type: 'line',
-                        stacked: false,
-                        events: {
-                            click: function (event, chartContext, opts) {
-                                let year_clicked = [...years][opts.dataPointIndex]
-                                show_award_details(year_clicked)
-                            }
-                        }
-                    },
-                    colors: chart_colors,
-                    dataLabels: {
-                        enabled: false
-                    },
-                    stroke: {
-                        width: [1, 4, 4]
-                    },
-                    title: {
-                        text: `CoDHR Project Support (${Math.min(...years)} - ${Math.max(...years)})`,
-                        text: '',
-                        align: 'left',
-                        offsetX: 110
-                    },
-                    xaxis: {
-                        categories: [...years],
-                    },
-                    yaxis: [
-                        {
-                            seriesName: 'People',
-                            axisTicks: {
-                                show: true,
-                            },
-                            axisBorder: {
-                                show: true,
-                                color: chart_colors[0]
-                            },
-                            labels: {
-                                style: {
-                                    colors: chart_colors[0],
-                                }
-                            },
-                            title: {
-                                text: "People Awarded",
-                                style: {
-                                    color: chart_colors[0],
-                                }
-                            },
-                            tooltip: {
-                                enabled: true
-                            }
-                        },
-                        {
-                            seriesName: 'Funding',
-                            opposite: true,
-                            axisTicks: {
-                                show: true,
-                            },
-                            axisBorder: {
-                                show: true,
-                                color: chart_colors[1]
-                            },
-                            labels: {
-                                style: {
-                                    colors: chart_colors[1]
-                                }
-                            },
-                            title: {
-                                text: "Funding Awarded",
-                                style: {
-                                    color: chart_colors[1],
-                                }
-                            },
-                        },
-                        {
-                            seriesName: 'Hours',
-                            opposite: true,
-                            axisTicks: {
-                                show: true,
-                            },
-                            axisBorder: {
-                                show: true,
-                                color: chart_colors[2]
-                            },
-                            labels: {
-                                style: {
-                                    colors: chart_colors[2],
-                                },
-                            },
-                            title: {
-                                text: "Hours Awarded",
-                                style: {
-                                    color: chart_colors[2],
-                                }
-                            }
-                        },
-                    ],
-                    tooltip: {
-                        fixed: {
-                            enabled: true,
-                            position: 'topLeft', // topRight, topLeft, bottomRight, bottomLeft
-                            offsetY: 30,
-                            offsetX: 60
-                        },
-                    },
-                    legend: {
-                        horizontalAlign: 'left',
-                        offsetX: 40
-                    },
-                })
-            people_main_chart.render()
-
-            people_dept_chart = new ApexCharts(document.querySelector('#people-departments'), {
-                title: {text: 'People by Department'},
-                series: dept_labels.map(dept => dept_data[dept].stakeholders.size),
-                labels: dept_labels,
-                colors: chart_colors,
-                chart: {
-                    type: 'donut',
-                    events: {
-                        click: function (event, chartContext, opts) {
-                            show_department_details(dept_labels[opts.dataPointIndex])
-                        }
-                    }
-                }
-            })
-            people_dept_chart.render()
-        } else {
-            setTimeout(() => flesh_out_report(), 1000)
-        }
+        })
+        awards_dept_chart.render()
     }
 
     function show_department_details(dept) {
@@ -628,6 +591,182 @@
         awards_dept_detail_grid.render(document.getElementById('department-detail'))
     }
 
+    function build_events_main_chart() {
+        if (events_main_chart) events_main_chart.destroy()
+
+        let event_datapoints = []
+        let attendee_datapoints = []
+
+        let awardPeriodStarted = false
+        let awardPeriodEnded = false
+        let relevantPeriods = []
+        periods.forEach(period => {
+            if (period === periodStartBox.value) awardPeriodStarted = true
+
+            if (awardPeriodStarted && !awardPeriodEnded) {
+                relevantPeriods.push(period)
+                event_datapoints.push(period_data[period].events.size)
+                attendee_datapoints.push(period_data[period].attendees)
+            }
+
+            if (period === periodEndBox.value) awardPeriodEnded = true
+        })
+
+        events_main_chart = new ApexCharts(document.querySelector("#event-chart"), {
+            series: [{
+                name: 'Events',
+                type: 'column',
+                data: event_datapoints
+            }, {
+                name: 'Attendees',
+                type: 'line',
+                data: attendee_datapoints
+            }],
+            colors: chart_colors,
+            chart: {
+                height: 350,
+                fontFamily: 'Oswald, sans-serif',
+                type: 'line',
+                stacked: false,
+                //events: {
+                //    click: function (event, chartContext, opts) {
+                //        let period_clicked = relevantPeriods[opts.dataPointIndex]
+                //        show_award_details(period_clicked)
+                //    }
+                //}
+            },
+            dataLabels: {
+                enabled: false
+            },
+            stroke: {
+                width: [1, 4]
+            },
+            title: {
+                text: `CoDHR Events`,
+                text: '',
+                align: 'left',
+                offsetX: 110
+            },
+            xaxis: {
+                categories: relevantPeriods,
+                labels: {
+                    rotate: -45,
+                    rotateAlways: true,
+                }
+            },
+            yaxis: [
+                {
+                    seriesName: 'Events',
+                    axisTicks: {
+                        show: true,
+                    },
+                    axisBorder: {
+                        show: true,
+                        color: chart_colors[0],
+                    },
+                    labels: {
+                        style: {
+                            colors: chart_colors[0],
+                        }
+                    },
+                    title: {
+                        text: "Events",
+                        style: {
+                            color: chart_colors[0],
+                        }
+                    },
+                    tooltip: {
+                        enabled: true
+                    }
+                },
+                {
+                    seriesName: 'Attendees',
+                    opposite: true,
+                    axisTicks: {
+                        show: true,
+                    },
+                    axisBorder: {
+                        show: true,
+                        color: chart_colors[1]
+                    },
+                    labels: {
+                        style: {
+                            colors: chart_colors[1],
+                        }
+                    },
+                    title: {
+                        text: "Attendees",
+                        style: {
+                            color: chart_colors[1],
+                        }
+                    },
+                },
+            ],
+            tooltip: {
+                fixed: {
+                    enabled: true,
+                    position: 'topLeft', // topRight, topLeft, bottomRight, bottomLeft
+                    offsetY: 30,
+                    offsetX: 60
+                },
+            },
+            legend: {
+                horizontalAlign: 'left',
+                offsetX: 40
+            },
+        })
+        events_main_chart.render()
+    }
+
+    function build_events_dept_chart() {
+        if (events_dept_chart) events_dept_chart.destroy()
+
+        let dept_labels = Object.keys(dept_data).map(dept => dept)
+        events_dept_chart = new ApexCharts(document.querySelector('#event-departments'), {
+            title: {text: 'Events by Department'},
+            series: dept_labels.map(dept => dept_data[dept].attendees),
+            labels: dept_labels,
+            colors: chart_colors,
+            chart: {
+                type: 'donut',
+                fontFamily: 'Oswald, sans-serif',
+                //events: {
+                //    click: function (event, chartContext, opts) {
+                //        show_department_details(dept_labels[opts.dataPointIndex])
+                //    }
+                //}
+            }
+        })
+        events_dept_chart.render()
+    }
+
+    function doTickerAnimation(ticker) {
+        const animate = () => {
+            const value = +ticker.getAttribute('data-total')
+            const speed = +ticker.getAttribute('data-duration')
+            const data = +ticker.innerText.replace(',', '')
+            const time = value / speed
+
+            if(data < value) {
+                ticker.innerText = Math.ceil(data + time).toLocaleString()
+                setTimeout(animate, 1)
+            } else {
+                ticker.innerText = value.toLocaleString()
+            }
+        }
+
+        animate()
+    }
+
+    function date_string(timestamp, granularity='Day', adjust_for_timezone=true) {
+        let date = new Date(timestamp)
+        if (granularity === 'Day')
+            return date.toISOString().split('T')[0]
+        else if (granularity === 'Year')
+            return date.toLocaleString('default', { year: 'numeric' })
+        else if (granularity === 'Month')
+            return date.toLocaleString('default', { month: 'long', year: 'numeric' })
+    }
 </script>
 </body>
 </html>

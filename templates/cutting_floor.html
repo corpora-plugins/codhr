@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <h2>People Centric Data</h2>
+    <div id="people-chart"></div>
+    <div id="people-detail"></div>
+    <div id="people-department-data">
+        <div id="people-departments" class="department-item"></div>
+        <div class="department-item">
+            <div id="people-department-detail"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+    {{ award_data|json_script:"award-data" }}
+    {{ project_data|json_script:"project-data" }}
+    {{ stakeholder_data|json_script:"stakeholder-data" }}
+    <script type="application/javascript">
+        let people_main_chart = null
+        let people_detail_grid = null
+        let people_dept_chart = null
+        let people_dept_detail_grid = null
+
+        let people_datapoints = []
+        let funding_datapoints = []
+        let hours_datapoints = []
+
+        periods.forEach(period => {
+            people_datapoints.push(period_data[period].people.size)
+            funding_datapoints.push(period_data[period].money)
+            hours_datapoints.push(period_data[period].hours)
+        })
+
+        people_main_chart = new ApexCharts(document.querySelector("#people-chart"), {
+                series: [{
+                    name: 'People',
+                    type: 'column',
+                    data: people_datapoints
+                }, {
+                    name: 'Funding',
+                    type: 'line',
+                    data: funding_datapoints
+                }, {
+                    name: 'Hours',
+                    type: 'line',
+                    data: hours_datapoints
+                }],
+                chart: {
+                    height: 350,
+                    type: 'line',
+                    stacked: false,
+                    events: {
+                        click: function (event, chartContext, opts) {
+                            let period_clicked = [...periods][opts.dataPointIndex]
+                            show_award_details(period_clicked)
+                        }
+                    }
+                },
+                colors: chart_colors,
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    width: [1, 4, 4]
+                },
+                title: {
+                    text: `CoDHR Project Support (${[...periods][0]} - ${[...periods][periods.size - 1]})`,
+                    text: '',
+                    align: 'left',
+                    offsetX: 110
+                },
+                xaxis: {
+                    categories: [...periods],
+                },
+                yaxis: [
+                    {
+                        seriesName: 'People',
+                        axisTicks: {
+                            show: true,
+                        },
+                        axisBorder: {
+                            show: true,
+                            color: chart_colors[0]
+                        },
+                        labels: {
+                            style: {
+                                colors: chart_colors[0],
+                            }
+                        },
+                        title: {
+                            text: "People Awarded",
+                            style: {
+                                color: chart_colors[0],
+                            }
+                        },
+                        tooltip: {
+                            enabled: true
+                        }
+                    },
+                    {
+                        seriesName: 'Funding',
+                        opposite: true,
+                        axisTicks: {
+                            show: true,
+                        },
+                        axisBorder: {
+                            show: true,
+                            color: chart_colors[1]
+                        },
+                        labels: {
+                            style: {
+                                colors: chart_colors[1]
+                            }
+                        },
+                        title: {
+                            text: "Funding Awarded",
+                            style: {
+                                color: chart_colors[1],
+                            }
+                        },
+                    },
+                    {
+                        seriesName: 'Hours',
+                        opposite: true,
+                        axisTicks: {
+                            show: true,
+                        },
+                        axisBorder: {
+                            show: true,
+                            color: chart_colors[2]
+                        },
+                        labels: {
+                            style: {
+                                colors: chart_colors[2],
+                            },
+                        },
+                        title: {
+                            text: "Hours Awarded",
+                            style: {
+                                color: chart_colors[2],
+                            }
+                        }
+                    },
+                ],
+                tooltip: {
+                    fixed: {
+                        enabled: true,
+                        position: 'topLeft', // topRight, topLeft, bottomRight, bottomLeft
+                        offsetY: 30,
+                        offsetX: 60
+                    },
+                },
+                legend: {
+                    horizontalAlign: 'left',
+                    offsetX: 40
+                },
+            })
+        people_main_chart.render()
+
+        people_dept_chart = new ApexCharts(document.querySelector('#people-departments'), {
+            title: {text: 'People by Department'},
+            series: dept_labels.map(dept => dept_data[dept].stakeholders.size),
+            labels: dept_labels,
+            colors: chart_colors,
+            chart: {
+                type: 'donut',
+                events: {
+                    click: function (event, chartContext, opts) {
+                        show_department_details(dept_labels[opts.dataPointIndex])
+                    }
+                }
+            }
+        })
+        people_dept_chart.render()
+    </script>
+</body>
+</html>

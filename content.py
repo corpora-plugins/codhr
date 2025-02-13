@@ -1,74 +1,5 @@
 REGISTRY = [
     {
-        "name": "Stakeholder",
-        "plural_name": "Stakeholders",
-        "fields": [
-            {
-                "name": "name",
-                "label": "Name",
-                "indexed": False,
-                "unique": False,
-                "multiple": False,
-                "in_lists": True,
-                "type": "text",
-                "choices": [],
-                "cross_reference_type": "",
-                "has_intensity": False,
-                "language": "english",
-                "autocomplete": False,
-                "synonym_file": None,
-                "indexed_with": [],
-                "unique_with": [],
-                "stats": {},
-                "inherited": False
-            },
-            {
-                "name": "department",
-                "label": "Department",
-                "indexed": False,
-                "unique": False,
-                "multiple": False,
-                "in_lists": True,
-                "type": "cross_reference",
-                "choices": [],
-                "cross_reference_type": "Department",
-                "has_intensity": False,
-                "language": None,
-                "autocomplete": False,
-                "synonym_file": None,
-                "indexed_with": [],
-                "unique_with": [],
-                "stats": {},
-                "inherited": False
-            }
-        ],
-        "show_in_nav": True,
-        "autocomplete_labels": False,
-        "proxy_field": "",
-        "templates": {
-            "Label": {
-                "template": "{{ Stakeholder.name }}",
-                "mime_type": "text/html"
-            }
-        },
-        "view_widget_url": None,
-        "edit_widget_url": None,
-        "inherited_from_module": None,
-        "inherited_from_class": None,
-        "base_mongo_indexes": None,
-        "has_file_field": False,
-        "invalid_field_names": [
-            "corpus_id",
-            "content_type",
-            "last_updated",
-            "provenance",
-            "field_intensities",
-            "path",
-            "label",
-            "uri"
-        ]
-    },
-    {
         "name": "Department",
         "plural_name": "Departments",
         "fields": [
@@ -108,82 +39,13 @@ REGISTRY = [
         "base_mongo_indexes": None,
         "has_file_field": False,
         "invalid_field_names": [
-            "corpus_id",
-            "content_type",
-            "last_updated",
-            "provenance",
-            "field_intensities",
             "path",
-            "label",
-            "uri"
-        ]
-    },
-    {
-        "name": "Project",
-        "plural_name": "Projects",
-        "fields": [
-            {
-                "name": "title",
-                "label": "Title",
-                "indexed": False,
-                "unique": False,
-                "multiple": False,
-                "in_lists": True,
-                "type": "text",
-                "choices": [],
-                "cross_reference_type": "",
-                "has_intensity": False,
-                "language": "english",
-                "autocomplete": False,
-                "synonym_file": None,
-                "indexed_with": [],
-                "unique_with": [],
-                "stats": {},
-                "inherited": False
-            },
-            {
-                "name": "principle_investigators",
-                "label": "Investigators",
-                "indexed": False,
-                "unique": False,
-                "multiple": True,
-                "in_lists": True,
-                "type": "cross_reference",
-                "choices": [],
-                "cross_reference_type": "Stakeholder",
-                "has_intensity": False,
-                "language": None,
-                "autocomplete": False,
-                "synonym_file": None,
-                "indexed_with": [],
-                "unique_with": [],
-                "stats": {},
-                "inherited": False
-            }
-        ],
-        "show_in_nav": True,
-        "autocomplete_labels": False,
-        "proxy_field": "",
-        "templates": {
-            "Label": {
-                "template": "{{ Project.title }}",
-                "mime_type": "text/html"
-            }
-        },
-        "view_widget_url": None,
-        "edit_widget_url": None,
-        "inherited_from_module": None,
-        "inherited_from_class": None,
-        "base_mongo_indexes": None,
-        "has_file_field": False,
-        "invalid_field_names": [
-            "corpus_id",
-            "content_type",
-            "last_updated",
             "provenance",
-            "field_intensities",
-            "path",
+            "last_updated",
+            "content_type",
             "label",
+            "corpus_id",
+            "field_intensities",
             "uri"
         ]
     },
@@ -246,13 +108,151 @@ REGISTRY = [
         "base_mongo_indexes": None,
         "has_file_field": False,
         "invalid_field_names": [
-            "corpus_id",
-            "content_type",
-            "last_updated",
-            "provenance",
-            "field_intensities",
             "path",
+            "provenance",
+            "last_updated",
+            "content_type",
             "label",
+            "corpus_id",
+            "field_intensities",
+            "uri"
+        ]
+    },
+    {
+        "name": "Stakeholder",
+        "plural_name": "Stakeholders",
+        "fields": [
+            {
+                "name": "name",
+                "label": "Name",
+                "indexed": False,
+                "unique": False,
+                "multiple": False,
+                "in_lists": True,
+                "type": "text",
+                "choices": [],
+                "cross_reference_type": "",
+                "has_intensity": False,
+                "language": "english",
+                "autocomplete": False,
+                "synonym_file": None,
+                "indexed_with": [],
+                "unique_with": [],
+                "stats": {},
+                "inherited": False
+            },
+            {
+                "name": "department",
+                "label": "Department",
+                "indexed": False,
+                "unique": False,
+                "multiple": False,
+                "in_lists": True,
+                "type": "cross_reference",
+                "choices": [],
+                "cross_reference_type": "Department",
+                "has_intensity": False,
+                "language": None,
+                "autocomplete": False,
+                "synonym_file": None,
+                "indexed_with": [],
+                "unique_with": [],
+                "stats": {},
+                "inherited": False
+            }
+        ],
+        "show_in_nav": True,
+        "autocomplete_labels": False,
+        "proxy_field": "",
+        "templates": {
+            "Label": {
+                "template": "{{ Stakeholder.name }}",
+                "mime_type": "text/html"
+            }
+        },
+        "view_widget_url": None,
+        "edit_widget_url": None,
+        "inherited_from_module": None,
+        "inherited_from_class": None,
+        "base_mongo_indexes": None,
+        "has_file_field": False,
+        "invalid_field_names": [
+            "path",
+            "provenance",
+            "last_updated",
+            "content_type",
+            "label",
+            "corpus_id",
+            "field_intensities",
+            "uri"
+        ]
+    },
+    {
+        "name": "Project",
+        "plural_name": "Projects",
+        "fields": [
+            {
+                "name": "title",
+                "label": "Title",
+                "indexed": False,
+                "unique": False,
+                "multiple": False,
+                "in_lists": True,
+                "type": "text",
+                "choices": [],
+                "cross_reference_type": "",
+                "has_intensity": False,
+                "language": "english",
+                "autocomplete": False,
+                "synonym_file": None,
+                "indexed_with": [],
+                "unique_with": [],
+                "stats": {},
+                "inherited": False
+            },
+            {
+                "name": "principle_investigators",
+                "label": "Investigators",
+                "indexed": False,
+                "unique": False,
+                "multiple": True,
+                "in_lists": True,
+                "type": "cross_reference",
+                "choices": [],
+                "cross_reference_type": "Stakeholder",
+                "has_intensity": False,
+                "language": None,
+                "autocomplete": False,
+                "synonym_file": None,
+                "indexed_with": [],
+                "unique_with": [],
+                "stats": {},
+                "inherited": False
+            }
+        ],
+        "show_in_nav": True,
+        "autocomplete_labels": False,
+        "proxy_field": "",
+        "templates": {
+            "Label": {
+                "template": "{{ Project.title }}",
+                "mime_type": "text/html"
+            }
+        },
+        "view_widget_url": None,
+        "edit_widget_url": None,
+        "inherited_from_module": None,
+        "inherited_from_class": None,
+        "base_mongo_indexes": None,
+        "has_file_field": False,
+        "invalid_field_names": [
+            "path",
+            "provenance",
+            "last_updated",
+            "content_type",
+            "label",
+            "corpus_id",
+            "field_intensities",
             "uri"
         ]
     },
@@ -419,6 +419,182 @@ REGISTRY = [
         "templates": {
             "Label": {
                 "template": "{{ Award.award_type.name }}",
+                "mime_type": "text/html"
+            }
+        },
+        "view_widget_url": None,
+        "edit_widget_url": None,
+        "inherited_from_module": None,
+        "inherited_from_class": None,
+        "base_mongo_indexes": None,
+        "has_file_field": False,
+        "invalid_field_names": [
+            "path",
+            "provenance",
+            "last_updated",
+            "content_type",
+            "label",
+            "corpus_id",
+            "field_intensities",
+            "uri"
+        ]
+    },
+    {
+        "name": "Event",
+        "plural_name": "Events",
+        "fields": [
+            {
+                "name": "title",
+                "label": "Title",
+                "indexed": False,
+                "unique": False,
+                "multiple": False,
+                "in_lists": True,
+                "type": "text",
+                "choices": [],
+                "cross_reference_type": "",
+                "has_intensity": False,
+                "language": "english",
+                "autocomplete": False,
+                "synonym_file": None,
+                "indexed_with": [],
+                "unique_with": [],
+                "stats": {},
+                "inherited": False
+            },
+            {
+                "name": "date",
+                "label": "Date",
+                "indexed": False,
+                "unique": False,
+                "multiple": False,
+                "in_lists": True,
+                "type": "date",
+                "choices": [],
+                "cross_reference_type": "",
+                "has_intensity": False,
+                "language": None,
+                "autocomplete": False,
+                "synonym_file": None,
+                "indexed_with": [],
+                "unique_with": [],
+                "stats": {},
+                "inherited": False
+            },
+            {
+                "name": "semester",
+                "label": "Semester",
+                "indexed": False,
+                "unique": False,
+                "multiple": False,
+                "in_lists": True,
+                "type": "text",
+                "choices": [],
+                "cross_reference_type": "",
+                "has_intensity": False,
+                "language": "english",
+                "autocomplete": False,
+                "synonym_file": None,
+                "indexed_with": [],
+                "unique_with": [],
+                "stats": {},
+                "inherited": False
+            }
+        ],
+        "show_in_nav": True,
+        "autocomplete_labels": False,
+        "proxy_field": "",
+        "templates": {
+            "Label": {
+                "template": "{{ Event.title }}",
+                "mime_type": "text/html"
+            }
+        },
+        "view_widget_url": None,
+        "edit_widget_url": None,
+        "inherited_from_module": None,
+        "inherited_from_class": None,
+        "base_mongo_indexes": None,
+        "has_file_field": False,
+        "invalid_field_names": [
+            "corpus_id",
+            "content_type",
+            "last_updated",
+            "provenance",
+            "field_intensities",
+            "path",
+            "label",
+            "uri"
+        ]
+    },
+    {
+        "name": "Attendance",
+        "plural_name": "Attendances",
+        "fields": [
+            {
+                "name": "event",
+                "label": "Event",
+                "indexed": False,
+                "unique": False,
+                "multiple": False,
+                "in_lists": True,
+                "type": "cross_reference",
+                "choices": [],
+                "cross_reference_type": "Event",
+                "has_intensity": False,
+                "language": None,
+                "autocomplete": False,
+                "synonym_file": None,
+                "indexed_with": [],
+                "unique_with": [],
+                "stats": {},
+                "inherited": False
+            },
+            {
+                "name": "person",
+                "label": "Person",
+                "indexed": False,
+                "unique": False,
+                "multiple": False,
+                "in_lists": True,
+                "type": "cross_reference",
+                "choices": [],
+                "cross_reference_type": "Stakeholder",
+                "has_intensity": False,
+                "language": None,
+                "autocomplete": False,
+                "synonym_file": None,
+                "indexed_with": [],
+                "unique_with": [],
+                "stats": {},
+                "inherited": False
+            },
+            {
+                "name": "attendance_type",
+                "label": "Type",
+                "indexed": False,
+                "unique": False,
+                "multiple": False,
+                "in_lists": True,
+                "type": "keyword",
+                "choices": [],
+                "cross_reference_type": "",
+                "has_intensity": False,
+                "language": None,
+                "autocomplete": False,
+                "synonym_file": None,
+                "indexed_with": [],
+                "unique_with": [],
+                "stats": {},
+                "inherited": False
+            }
+        ],
+        "show_in_nav": True,
+        "autocomplete_labels": False,
+        "proxy_field": "",
+        "templates": {
+            "Label": {
+                "template": "{{ Attendance.person.label }} at {{ Attendance.event.label }}",
                 "mime_type": "text/html"
             }
         },
