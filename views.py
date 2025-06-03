@@ -1,11 +1,13 @@
 from django.shortcuts import render, HttpResponse, redirect
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.conf import settings
 from corpus import *
 
-
+@xframe_options_exempt
 def report(request, corpus_id):
     corpora_url = 'https://' if settings.USE_SSL else 'http://'
     corpora_url += settings.ALLOWED_HOSTS[0]
+    is_embedded = 'embedded' in request.GET
     award_results = []
     project_results = []
     stakeholder_results = []
@@ -72,6 +74,7 @@ def report(request, corpus_id):
         {
             'corpora_host': corpora_url,
             'corpus_id': corpus_id,
+            'is_embedded': is_embedded,
             'award_data': award_results,
             'project_data': project_results,
             'stakeholder_data': stakeholder_results,

@@ -6,7 +6,9 @@
     <meta charset="UTF-8">
     <title>CoDHR Project Support</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
     <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
     <style>
         :root {
@@ -18,7 +20,7 @@
         }
 
         body {
-            font-family: "Oswald", sans-serif;
+            font-family: "Open Sans", sans-serif;
         }
 
         a {
@@ -77,7 +79,7 @@
   </style>
 </head>
 <body>
-    <img id="codhr-logo" src="{% static 'img/codhr-data-report-logo.png' %}" alt="Center of Digital Humanities Research" />
+    {% if not is_embedded %}<img id="codhr-logo" src="{% static 'img/codhr-data-report-logo.png' %}" alt="Center of Digital Humanities Research" />{% endif %}
     <h1>Project Support and Event Data</h1>
     From <select id="period-start-box"></select> to <select id="period-end-box"></select>
     <div id="award-totals">
@@ -127,7 +129,13 @@
         </div>
     </div>
 
-
+    <details>
+        <summary>Configure chart sizing</summary>
+        <div><label>Chart Height:</label> <input type="text" id="chart-height" value="" /></div>
+        <div><label>Chart Width:</label> <input type="text" id="chart-width" value="100%" /></div>
+        <div><label>Chart Line Thickness:</label> <input type="text" id="chart-line-thickness" value="4" /></div>
+        <div><label>Chart Font Size:</label> <input type="text" id="chart-font-size" value="14" /></div>
+    </details>
 
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
@@ -142,6 +150,7 @@
     let corpus_id = '{{ corpus_id }}'
     let corpora_host = '{{ corpora_host }}'
     let chart_colors = ['#500000', '#90A959', '#E9B872', '#3E3E3E', '#6494AA']
+    let chartFont = '"Open Sans", sans-serif'
 
     let periodStartBox = document.getElementById('period-start-box')
     let periodEndBox = document.getElementById('period-end-box')
@@ -188,6 +197,10 @@
         style: 'currency',
         currency: 'USD',
     })
+    let chartHeightControl = document.getElementById('chart-height')
+    let chartWidthControl = document.getElementById('chart-width')
+    let chartLineThicknessControl = document.getElementById('chart-line-thickness')
+    let chartFontSizeControl = document.getElementById('chart-font-size')
 
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -364,8 +377,30 @@
         let funding_datapoints = []
         let hours_datapoints = []
 
-        let chartHeight = Math.floor(window.innerHeight * 0.8)
-        if (chartHeight > 500) chartHeight = 500
+        let chartHeight = chartHeightControl.value
+        if (chartHeight.length) {
+            if (!chartHeight.endsWith('%')) chartHeight = parseInt(chartHeight)
+        } else {
+            chartHeight = Math.floor(window.innerHeight * 0.8)
+            if (chartHeight > 500) chartHeight = 500
+        }
+
+        let chartWidth = chartWidthControl.value
+        if (chartWidth.length) {
+            if (!chartWidth.endsWith('%')) chartWidth = parseInt(chartWidth)
+        } else {
+            chartWidth = '100%'
+        }
+
+        let chartLineThickness = chartLineThicknessControl.value
+        if (chartLineThickness.length) {
+            chartLineThickness = parseInt(chartLineThickness)
+        } else {
+            chartLineThickness = 4
+        }
+
+        let chartFontSize = chartFontSizeControl.value
+        if (!chartFontSize.length) chartFontSize = 14
 
         let awardPeriodStarted = false
         let awardPeriodEnded = false
@@ -396,7 +431,8 @@
             colors: chart_colors,
             chart: {
                 height: chartHeight,
-                fontFamily: 'Oswald, sans-serif',
+                width: chartWidth,
+                fontFamily: chartFont,
                 type: 'line',
                 stacked: false,
                 events: {
@@ -413,7 +449,7 @@
                 enabled: false
             },
             stroke: {
-                width: [1, 4, 4]
+                width: [1, chartLineThickness]
             },
             title: {
                 text: `Award Funding`,
@@ -425,6 +461,10 @@
                 labels: {
                     rotate: -45,
                     rotateAlways: true,
+                    offsetY: 15,
+                    style: {
+                        fontSize: `${chartFontSize}px`
+                    }
                 }
             },
             yaxis: [
@@ -440,12 +480,14 @@
                     labels: {
                         style: {
                             colors: chart_colors[0],
+                            fontSize: `${chartFontSize}px`
                         }
                     },
                     title: {
                         text: "Awards Given",
                         style: {
                             color: chart_colors[0],
+                            fontSize: `${chartFontSize}px`
                         }
                     },
                     tooltip: {
@@ -463,14 +505,20 @@
                         color: chart_colors[1]
                     },
                     labels: {
+                        formatter: function(value) {
+                            return '$' + value.toLocaleString('en-US')
+                        },
                         style: {
                             colors: chart_colors[1],
+                            fontSize: `${chartFontSize}px`
                         }
                     },
                     title: {
                         text: "Funding Awarded",
+                        offsetX: 15,
                         style: {
                             color: chart_colors[1],
+                            fontSize: `${chartFontSize}px`
                         }
                     },
                 },
@@ -485,7 +533,11 @@
             },
             legend: {
                 horizontalAlign: 'left',
-                offsetX: 40
+                offsetX: 40,
+                fontSize: `${chartFontSize}px`,
+                markers: {
+                    size: Math.ceil(chartFontSize / 2)
+                }
             },
         })
         awards_funding_chart.render()
@@ -503,7 +555,8 @@
             colors: [chart_colors[0], chart_colors[2]],
             chart: {
                 height: chartHeight,
-                fontFamily: 'Oswald, sans-serif',
+                width: chartWidth,
+                fontFamily: chartFont,
                 type: 'line',
                 stacked: false,
                 events: {
@@ -520,7 +573,7 @@
                 enabled: false
             },
             stroke: {
-                width: [1, 4]
+                width: [1, chartLineThickness]
             },
             title: {
                 text: `Award Hours`,
@@ -532,6 +585,10 @@
                 labels: {
                     rotate: -45,
                     rotateAlways: true,
+                    offsetY: 15,
+                    style: {
+                        fontSize: `${chartFontSize}px`
+                    }
                 }
             },
             yaxis: [
@@ -547,12 +604,14 @@
                     labels: {
                         style: {
                             colors: chart_colors[0],
+                            fontSize: `${chartFontSize}px`
                         }
                     },
                     title: {
                         text: "Awards Given",
                         style: {
                             color: chart_colors[0],
+                            fontSize: `${chartFontSize}px`
                         }
                     },
                     tooltip: {
@@ -572,12 +631,15 @@
                     labels: {
                         style: {
                             colors: chart_colors[2],
+                            fontSize: `${chartFontSize}px`
                         },
                     },
                     title: {
                         text: "Hours Awarded",
+                        offsetX: 15,
                         style: {
                             color: chart_colors[2],
+                            fontSize: `${chartFontSize}px`
                         }
                     }
                 },
@@ -592,7 +654,11 @@
             },
             legend: {
                 horizontalAlign: 'left',
-                offsetX: 40
+                offsetX: 40,
+                fontSize: `${chartFontSize}px`,
+                markers: {
+                    size: Math.ceil(chartFontSize / 2)
+                }
             },
         })
         awards_hours_chart.render()
@@ -671,7 +737,13 @@
             colors: chart_colors,
             chart: {
                 type: 'donut',
-                fontFamily: 'Oswald, sans-serif',
+                toolbar: {
+                    show: true,
+                    tools: {
+                        download: true
+                    }
+                },
+                fontFamily: chartFont,
                 events: {
                     click: function (event, chartContext, opts) {
                         show_department_details(relevantDepts[opts.dataPointIndex])
@@ -760,7 +832,7 @@
             colors: chart_colors,
             chart: {
                 height: chartHeight,
-                fontFamily: 'Oswald, sans-serif',
+                fontFamily: chartFont,
                 type: 'line',
                 stacked: false,
                 events: {
@@ -903,7 +975,7 @@
             colors: chart_colors,
             chart: {
                 type: 'donut',
-                fontFamily: 'Oswald, sans-serif',
+                fontFamily: chartFont,
                 //events: {
                 //    click: function (event, chartContext, opts) {
                 //        show_department_details(dept_labels[opts.dataPointIndex])
