@@ -129,7 +129,7 @@
         </div>
     </div>
 
-    <details>
+    <details {% if is_embedded %}style="display: none;"{% endif %}>
         <summary>Configure chart sizing</summary>
         <div><label>Chart Height:</label> <input type="text" id="chart-height" value="" /></div>
         <div><label>Chart Width:</label> <input type="text" id="chart-width" value="100%" /></div>
