@@ -1,7 +1,7 @@
 from django.shortcuts import render, HttpResponse, redirect
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.conf import settings
-from corpus import *
+from corpus import get_corpus
 
 @xframe_options_exempt
 def report(request, corpus_id):
